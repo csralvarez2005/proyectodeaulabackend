@@ -1,13 +1,16 @@
 package inventarioEyBackend.service.impl;
 
 import inventarioEyBackend.exception.ResourceNotFoundException;
+import inventarioEyBackend.model.Equipo;
 import inventarioEyBackend.model.Monitor;
+import inventarioEyBackend.repository.EquipoRepository;
 import inventarioEyBackend.repository.MonitorRepository;
 import inventarioEyBackend.service.MonitorService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -16,6 +19,9 @@ public class MonitorServiceImpl implements MonitorService {
 
     @Autowired
     private MonitorRepository monitorRepository;
+
+    @Autowired
+    private EquipoRepository equipoRepository;
 
     @Override
     public List<Monitor> getAllMonitores() {
@@ -86,5 +92,33 @@ public class MonitorServiceImpl implements MonitorService {
     @Override
     public boolean existsByNumeroSerie(String numeroSerie) {
         return monitorRepository.existsByNumeroSerie(numeroSerie);
+    }
+
+    @Override
+    @Transactional
+    public Monitor asignarEquipo(Long monitorId, Long equipoId) {
+        Monitor monitor = monitorRepository.findById(monitorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Monitor no encontrado con id: " + monitorId));
+
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + equipoId));
+
+        monitor.setEquipo(equipo);
+        return monitorRepository.save(monitor);
+    }
+
+    @Override
+    @Transactional
+    public Monitor desasignarEquipo(Long monitorId) {
+        Monitor monitor = monitorRepository.findById(monitorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Monitor no encontrado con id: " + monitorId));
+
+        monitor.setEquipo(null);
+        return monitorRepository.save(monitor);
+    }
+
+    @Override
+    public List<Monitor> findByEquipoIsNull() {
+        return monitorRepository.findByEquipoIsNull();
     }
 }

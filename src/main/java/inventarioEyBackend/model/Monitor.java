@@ -71,4 +71,9 @@ public class Monitor {
     // Información de compra y garantía
     @Column(length = 255)
     private String proveedor;
+
+    // Relación con equipo
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "equipo_id")
+    private Equipo equipo;
 }

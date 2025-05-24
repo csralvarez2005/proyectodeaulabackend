@@ -1,5 +1,7 @@
 package inventarioEyBackend.service;
+import inventarioEyBackend.model.Area;
 import inventarioEyBackend.model.Equipo;
+import inventarioEyBackend.model.Monitor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -17,4 +19,10 @@ public interface EquipoService {
     List<Equipo> findByMarca(String marca);
     List<Equipo> findByEstado(String estado);
     boolean existsById(Long id);
+    Equipo agregarMonitor(Long equipoId, Long monitorId);
+    Equipo quitarMonitor(Long equipoId, Long monitorId);
+    List<Equipo> findByMonitoresIsEmpty();
+    List<Monitor> getMonitoresByEquipoId(Long equipoId);
+    List<Area> getAreasByEquipoId(Long equipoId);
+    String generarCodigoEquipo(String abreviatura);
 }

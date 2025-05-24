@@ -10,4 +10,5 @@ public interface MonitorRepository extends JpaRepository<Monitor, Long> {
     List<Monitor> findByModelo(String modelo);
     List<Monitor> findByEstado(String estado);
     boolean existsByNumeroSerie(String numeroSerie);
+    List<Monitor> findByEquipoIsNull();
 }

@@ -19,4 +19,7 @@ public interface MonitorService {
     List<Monitor> findByEstado(String estado);
     boolean existsById(Long id);
     boolean existsByNumeroSerie(String numeroSerie);
+    Monitor asignarEquipo(Long monitorId, Long equipoId);
+    Monitor desasignarEquipo(Long monitorId);
+    List<Monitor> findByEquipoIsNull();
 }

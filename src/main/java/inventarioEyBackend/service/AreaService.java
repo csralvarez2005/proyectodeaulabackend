@@ -15,4 +15,5 @@ public interface AreaService {
     Area updateArea(Long id, Area areaDetails);
     void deleteArea(Long id);
     boolean existsById(Long id);
+    Optional<Area> getAreaByAbreviatura(String abreviatura);
 }

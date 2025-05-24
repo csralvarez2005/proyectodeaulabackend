@@ -63,4 +63,9 @@ public class AreaServiceImpl implements AreaService {
     public boolean existsById(Long id) {
         return areaRepository.existsById(id);
     }
+
+    @Override
+    public Optional<Area> getAreaByAbreviatura(String abreviatura) {
+        return areaRepository.findByAbreviatura(abreviatura);
+    }
 }

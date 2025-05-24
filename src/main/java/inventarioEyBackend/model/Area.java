@@ -1,9 +1,13 @@
 package inventarioEyBackend.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "inventario_areas")
@@ -21,5 +25,11 @@ public class Area {
 
     @Column(length = 255)
     private String tipo;
+    @JsonIgnore
+    @ManyToMany(mappedBy = "areas", fetch = FetchType.LAZY)
+    private List<Equipo> equipos = new ArrayList<>();
+
+    @Column(length = 10, nullable = false, unique = true)
+    private String abreviatura;
 }
 

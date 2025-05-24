@@ -1,5 +1,6 @@
 package inventarioEyBackend.controller;
 
+import inventarioEyBackend.exception.ResourceNotFoundException;
 import inventarioEyBackend.model.Monitor;
 import inventarioEyBackend.service.MonitorService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,5 +94,37 @@ public class MonitorController {
         }
         monitorService.deleteMonitor(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    @PutMapping("/{id}/asignar-equipo/{equipoId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Monitor> asignarEquipo(@PathVariable Long id, @PathVariable Long equipoId) {
+        try {
+            Monitor monitor = monitorService.asignarEquipo(id, equipoId);
+            return new ResponseEntity<>(monitor, HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @PutMapping("/{id}/desasignar-equipo")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Monitor> desasignarEquipo(@PathVariable Long id) {
+        try {
+            Monitor monitor = monitorService.desasignarEquipo(id);
+            return new ResponseEntity<>(monitor, HttpStatus.OK);
+        } catch (ResourceNotFoundException e) {
+            return new ResponseEntity<>(HttpStatus.NOT_FOUND);
+        } catch (Exception e) {
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @GetMapping("/disponibles")
+    @PreAuthorize("hasRole('USUARIO') or hasRole('ADMIN')")
+    public ResponseEntity<List<Monitor>> getMonitoresDisponibles() {
+        List<Monitor> monitores = monitorService.findByEquipoIsNull();
+        return new ResponseEntity<>(monitores, HttpStatus.OK);
     }
 }

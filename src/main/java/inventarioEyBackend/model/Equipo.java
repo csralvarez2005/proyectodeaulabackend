@@ -8,6 +8,8 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "inventario_equipos")
@@ -21,9 +23,8 @@ public class Equipo {
     private Long id;
 
     // Información general
-    @NotBlank(message = "El nombre del equipo no puede estar vacío")
-    @Column(length = 255)
-    private String CodigoEquipo;
+    @Column(length = 255, name = "codigo_equipo", unique = true, nullable = false)
+    private String codigoEquipo;
 
     @Column(length = 255)
     private String descripcion;
@@ -134,4 +135,23 @@ public class Equipo {
 
     @Column(length = 255)
     private String estado;
+
+    @OneToMany(mappedBy = "equipo", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Monitor> monitores = new ArrayList<>();
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "impresora_id") // Esta columna se agregará en la tabla inventario_equipos
+    private Impresora impresora;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "area_id")
+    private Area area;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "equipo_area",
+            joinColumns = @JoinColumn(name = "equipo_id"),
+            inverseJoinColumns = @JoinColumn(name = "area_id")
+    )
+    private List<Area> areas = new ArrayList<>();
 }

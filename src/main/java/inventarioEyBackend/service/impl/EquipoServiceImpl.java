@@ -1,15 +1,24 @@
 package inventarioEyBackend.service.impl;
 
+
 import inventarioEyBackend.exception.ResourceNotFoundException;
+import inventarioEyBackend.mapper.EquipoMapper;
+import inventarioEyBackend.model.Area;
 import inventarioEyBackend.model.Equipo;
+import inventarioEyBackend.model.Monitor;
+import inventarioEyBackend.repository.AreaRepository;
+import inventarioEyBackend.repository.EquipoMongoRepository;
 import inventarioEyBackend.repository.EquipoRepository;
+import inventarioEyBackend.repository.MonitorRepository;
 import inventarioEyBackend.service.EquipoService;
+import jakarta.persistence.EntityNotFoundException;
+import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,6 +27,13 @@ public class EquipoServiceImpl implements EquipoService {
 
     @Autowired
     private EquipoRepository equipoRepository;
+    @Autowired
+    private MonitorRepository monitorRepository;
+
+    @Autowired
+    private AreaRepository areaRepository;
+    @Autowired
+    private EquipoMongoRepository equipoMongoRepository;
 
     @Override
     public List<Equipo> getAllEquipos() {
@@ -37,75 +53,63 @@ public class EquipoServiceImpl implements EquipoService {
     @Override
     @Transactional
     public Equipo createEquipo(Equipo equipo) {
-        return equipoRepository.save(equipo);
+        if (equipo.getAreas() == null || equipo.getAreas().isEmpty()) {
+            throw new IllegalArgumentException("El equipo debe estar asociado a al menos un área");
+        }
+
+        Area areaPrincipal = equipo.getAreas().get(0);
+        String abreviatura = areaPrincipal.getAbreviatura();
+        String nuevoCodigo = generarCodigoEquipo(abreviatura);
+        equipo.setCodigoEquipo(nuevoCodigo);
+
+        if (equipo.getMonitores() != null) {
+            for (Monitor monitor : equipo.getMonitores()) {
+                monitor.setEquipo(equipo);
+            }
+        }
+
+        Equipo equipoGuardado = equipoRepository.save(equipo);
+
+        // Sincronizar con MongoDB
+        equipoMongoRepository.save(EquipoMapper.toMongo(equipoGuardado));
+
+        return equipoGuardado;
     }
 
     @Override
     @Transactional
     public Equipo updateEquipo(Long id, Equipo equipoDetails) {
-        return equipoRepository.findById(id)
-                .map(equipo -> {
-                    // Información general
-                    equipo.setCodigoEquipo(equipoDetails.getCodigoEquipo());
-                    equipo.setDescripcion(equipoDetails.getDescripcion());
-                    equipo.setTipo(equipoDetails.getTipo());
-                    equipo.setModelo(equipoDetails.getModelo());
-                    equipo.setMarca(equipoDetails.getMarca());
-                    equipo.setSerie(equipoDetails.getSerie());
-                    equipo.setUbicacionDelEquipo(equipoDetails.getUbicacionDelEquipo());
-                    equipo.setUtilizacion(equipoDetails.getUtilizacion());
-                    equipo.setRecibidoPor(equipoDetails.getRecibidoPor());
-
-                    // Información de compra y garantía
-                    equipo.setProveedor(equipoDetails.getProveedor());
-                    equipo.setOrdenDeCompra(equipoDetails.getOrdenDeCompra());
-                    equipo.setFactura(equipoDetails.getFactura());
-                    equipo.setFechaDeCompra(equipoDetails.getFechaDeCompra());
-                    equipo.setFechaFinGarantia(equipoDetails.getFechaFinGarantia());
-                    equipo.setGarantia(equipoDetails.getGarantia());
-                    equipo.setPrecio(equipoDetails.getPrecio());
-
-                    // Hardware
-                    equipo.setProcesador(equipoDetails.getProcesador());
-                    equipo.setMemoriaRamGB(equipoDetails.getMemoriaRamGB());
-                    equipo.setAlmacenamientoGB(equipoDetails.getAlmacenamientoGB());
-                    equipo.setTipoAlmacenamiento(equipoDetails.getTipoAlmacenamiento());
-                    equipo.setPlacaBase(equipoDetails.getPlacaBase());
-                    equipo.setFuentePoderWatts(equipoDetails.getFuentePoderWatts());
-                    equipo.setTarjetaGrafica(equipoDetails.getTarjetaGrafica());
-                    equipo.setTieneTarjetaRed(equipoDetails.getTieneTarjetaRed());
-                    equipo.setTieneTarjetaSonido(equipoDetails.getTieneTarjetaSonido());
-                    equipo.setGabinete(equipoDetails.getGabinete());
-                    equipo.setPerifericosEntrada(equipoDetails.getPerifericosEntrada());
-                    equipo.setPerifericosSalida(equipoDetails.getPerifericosSalida());
-                    equipo.setComponentes(equipoDetails.getComponentes());
-                    equipo.setAccesorios(equipoDetails.getAccesorios());
-
-                    // Software
-                    equipo.setSistemaOperativo(equipoDetails.getSistemaOperativo());
-                    equipo.setVersionSO(equipoDetails.getVersionSO());
-                    equipo.setDriversInstalados(equipoDetails.getDriversInstalados());
-                    equipo.setProgramasInstalados(equipoDetails.getProgramasInstalados());
-                    equipo.setUtilidadesSistema(equipoDetails.getUtilidadesSistema());
-
-                    // Red / Configuración técnica
-                    equipo.setDireccionIP(equipoDetails.getDireccionIP());
-                    equipo.setDireccionMAC(equipoDetails.getDireccionMAC());
-
-                    // Estado
-                    equipo.setEstado(equipoDetails.getEstado());
-
-                    return equipoRepository.save(equipo);
-                })
+        Equipo equipo = equipoRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + id));
+
+        equipo.setCodigoEquipo(equipoDetails.getCodigoEquipo());
+        equipo.setMarca(equipoDetails.getMarca());
+        equipo.setModelo(equipoDetails.getModelo());
+        equipo.setTipo(equipoDetails.getTipo());
+        equipo.setEstado(equipoDetails.getEstado());
+
+        if (equipoDetails.getMonitores() != null) {
+            equipo.getMonitores().clear();
+            for (Monitor monitor : equipoDetails.getMonitores()) {
+                monitor.setEquipo(equipo);
+                equipo.getMonitores().add(monitor);
+            }
+        }
+
+        Equipo equipoActualizado = equipoRepository.save(equipo);
+
+        // Sincronizar con MongoDB
+        equipoMongoRepository.save(EquipoMapper.toMongo(equipoActualizado));
+
+        return equipoActualizado;
     }
 
     @Override
-    @Transactional
     public void deleteEquipo(Long id) {
-        Equipo equipo = equipoRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + id));
-        equipoRepository.delete(equipo);
+        if (!equipoRepository.existsById(id)) {
+            throw new ResourceNotFoundException("Equipo no encontrado con id: " + id);
+        }
+        equipoRepository.deleteById(id);
     }
 
     @Override
@@ -127,4 +131,85 @@ public class EquipoServiceImpl implements EquipoService {
     public boolean existsById(Long id) {
         return equipoRepository.existsById(id);
     }
+
+    @Override
+    @Transactional
+    public Equipo agregarMonitor(Long equipoId, Long monitorId) {
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + equipoId));
+
+        Monitor monitor = monitorRepository.findById(monitorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Monitor no encontrado con id: " + monitorId));
+
+        // Verificar si el monitor ya está asignado a otro equipo
+        if (monitor.getEquipo() != null && !monitor.getEquipo().getId().equals(equipoId)) {
+            throw new IllegalStateException("El monitor ya está asignado a otro equipo");
+        }
+
+        monitor.setEquipo(equipo);
+        equipo.getMonitores().add(monitor);
+
+        return equipoRepository.save(equipo);
+    }
+
+    @Override
+    @Transactional
+    public Equipo quitarMonitor(Long equipoId, Long monitorId) {
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + equipoId));
+
+        Monitor monitor = monitorRepository.findById(monitorId)
+                .orElseThrow(() -> new ResourceNotFoundException("Monitor no encontrado con id: " + monitorId));
+
+        // Verificar que el monitor esté asignado a este equipo
+        if (monitor.getEquipo() == null || !monitor.getEquipo().getId().equals(equipoId)) {
+            throw new IllegalStateException("El monitor no está asignado a este equipo");
+        }
+
+        monitor.setEquipo(null);
+        equipo.getMonitores().removeIf(m -> m.getId().equals(monitorId));
+
+        return equipoRepository.save(equipo);
+    }
+
+    @Override
+    public List<Equipo> findByMonitoresIsEmpty() {
+        return equipoRepository.findByMonitoresIsEmpty();
+    }
+
+    @Override
+    public List<Monitor> getMonitoresByEquipoId(Long equipoId) {
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + equipoId));
+        return equipo.getMonitores();
+    }
+
+    @Override
+    public List<Area> getAreasByEquipoId(Long equipoId) {
+        Equipo equipo = equipoRepository.findById(equipoId)
+                .orElseThrow(() -> new ResourceNotFoundException("Equipo no encontrado con id: " + equipoId));
+
+        if (equipo.getAreas() == null) {
+            return new ArrayList<>();
+        }
+
+        return equipo.getAreas();
+    }
+
+    @Override
+    public String generarCodigoEquipo(String abreviatura) {
+        List<String> codigos = equipoRepository.findCodigosByAbreviaturaOrderedDesc(abreviatura);
+        int siguienteNumero = 1;
+
+        if (!codigos.isEmpty()) {
+            String ultimoCodigo = codigos.get(0); // ej. "EY-SIS-0005"
+            String numeroStr = ultimoCodigo.substring(ultimoCodigo.lastIndexOf("-") + 1);
+            siguienteNumero = Integer.parseInt(numeroStr) + 1;
+        }
+
+        String numeroFormateado = String.format("%04d", siguienteNumero);
+        return "EY-" + abreviatura + "-" + numeroFormateado; // Ej: EY-SIS-0006
+    }
+
+
 }
