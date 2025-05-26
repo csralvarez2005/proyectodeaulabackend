@@ -1,6 +1,7 @@
 package inventarioEyBackend.controller;
 import inventarioEyBackend.model.AsignacionEquipo;
 import inventarioEyBackend.service.AsignacionEquipoService;
+import inventarioEyBackend.service.MigracionAsignacionEquipoService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 
 @RestController
@@ -18,6 +20,10 @@ import java.util.List;
 public class AsignacionEquipoController {
     @Autowired
     private AsignacionEquipoService asignacionService;
+
+    @Autowired
+    private MigracionAsignacionEquipoService migracionAsignacionEquipoService;
+
 
     @GetMapping
     @PreAuthorize("hasRole('USUARIO') or hasRole('ADMIN')")
@@ -87,5 +93,28 @@ public class AsignacionEquipoController {
         }
         asignacionService.deleteAsignacion(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    @GetMapping("/migrar/mongo")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> migrarSiMongoVacio() {
+        migracionAsignacionEquipoService.migrarSiMongoEstaVacio();
+        return ResponseEntity.ok(" Migración ejecutada si MongoDB estaba vacío.");
+    }
+    @GetMapping("/migrar/forzar")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<String> migrarForzado() {
+        int cantidad = migracionAsignacionEquipoService.migrarForzado();
+        return ResponseEntity.ok("✔️ Migración forzada completada. Total migrados: " + cantidad);
+    }
+
+    @GetMapping("/migrar/pdf")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<byte[]> migrarYGenerarPdf() {
+        ByteArrayInputStream pdfStream = migracionAsignacionEquipoService.migrarYGenerarPdf();
+
+        return ResponseEntity.ok()
+                .header("Content-Disposition", "attachment; filename=reporte_asignaciones.pdf")
+                .contentType(org.springframework.http.MediaType.APPLICATION_PDF)
+                .body(pdfStream.readAllBytes());
     }
 }

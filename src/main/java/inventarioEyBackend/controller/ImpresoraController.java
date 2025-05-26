@@ -3,6 +3,8 @@ package inventarioEyBackend.controller;
 import inventarioEyBackend.model.Impresora;
 import inventarioEyBackend.service.ImpresoraService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -60,5 +62,10 @@ public class ImpresoraController {
         }
         impresoraService.deleteImpresora(id);
         return new ResponseEntity<>(HttpStatus.NO_CONTENT);
+    }
+    @GetMapping("/pageable")
+    @PreAuthorize("hasRole('USUARIO') or hasRole('ADMIN')")
+    public ResponseEntity<Page<Impresora>> getAllImpresorasPaginated(Pageable pageable) {
+        return new ResponseEntity<>(impresoraService.getAllImpresoras(pageable), HttpStatus.OK);
     }
 }

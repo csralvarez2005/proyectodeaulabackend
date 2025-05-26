@@ -1,15 +1,22 @@
 package inventarioEyBackend.service.impl;
 
+import inventarioEyBackend.dto.ReporteAsignacionDTO;
 import inventarioEyBackend.exception.ResourceNotFoundException;
+import inventarioEyBackend.mapper.AsignacionEquipoMapper;
 import inventarioEyBackend.model.AsignacionEquipo;
+import inventarioEyBackend.model.AsignacionEquipoMongo;
+import inventarioEyBackend.repository.AsignacionEquipoMongoRepository;
 import inventarioEyBackend.repository.AsignacionEquipoRepository;
 import inventarioEyBackend.service.AsignacionEquipoService;
+import inventarioEyBackend.util.PdfGenerator;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.util.List;
 import java.util.Optional;
 @Service
@@ -17,6 +24,12 @@ public class AsignacionEquipoServiceImpl implements AsignacionEquipoService {
     @Autowired
     private AsignacionEquipoRepository asignacionRepository;
 
+    @Autowired
+    private AsignacionEquipoMongoRepository asignacionMongoRepository;
+
+    // ============================
+    // CRUD Methods
+    // ============================
     @Override
     public List<AsignacionEquipo> getAllAsignaciones() {
         return asignacionRepository.findAll();
@@ -61,6 +74,11 @@ public class AsignacionEquipoServiceImpl implements AsignacionEquipoService {
     }
 
     @Override
+    public boolean existsById(Long id) {
+        return asignacionRepository.existsById(id);
+    }
+
+    @Override
     public List<AsignacionEquipo> getAsignacionesByEquipoId(Long equipoId) {
         return asignacionRepository.findByEquipoId(equipoId);
     }
@@ -75,8 +93,40 @@ public class AsignacionEquipoServiceImpl implements AsignacionEquipoService {
         return asignacionRepository.findByAreaId(areaId);
     }
 
+    // ============================
+    // Migración y PDF
+    // ============================
+    @PostConstruct
     @Override
-    public boolean existsById(Long id) {
-        return asignacionRepository.existsById(id);
+    public void migrarSiMongoEstaVacio() {
+        if (asignacionMongoRepository.count() == 0) {
+            List<AsignacionEquipo> asignaciones = asignacionRepository.findAll();
+            for (AsignacionEquipo asignacion : asignaciones) {
+                asignacionMongoRepository.save(AsignacionEquipoMapper.toMongo(asignacion));
+            }
+            System.out.println("✅ Migración automática completa: " + asignaciones.size() + " asignaciones.");
+        } else {
+            System.out.println("ℹ️ MongoDB ya tiene asignaciones. No se migró.");
+        }
+    }
+
+    @Override
+    public int migrarForzado() {
+        List<AsignacionEquipo> asignaciones = asignacionRepository.findAll();
+        for (AsignacionEquipo asignacion : asignaciones) {
+            asignacionMongoRepository.save(AsignacionEquipoMapper.toMongo(asignacion));
+        }
+        return asignaciones.size();
+    }
+
+    @Override
+    public ByteArrayInputStream migrarYGenerarPdf() {
+        List<AsignacionEquipo> asignaciones = asignacionRepository.findAll();
+        for (AsignacionEquipo asignacion : asignaciones) {
+            asignacionMongoRepository.save(AsignacionEquipoMapper.toMongo(asignacion));
+        }
+
+        List<ReporteAsignacionDTO> datosReporte = asignacionRepository.obtenerReporteAsignaciones();
+        return PdfGenerator.generarReporteAsignaciones(datosReporte);
     }
 }

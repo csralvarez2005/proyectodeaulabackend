@@ -5,6 +5,8 @@ import inventarioEyBackend.model.Impresora;
 import inventarioEyBackend.repository.ImpresoraRepository;
 import inventarioEyBackend.service.ImpresoraService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -71,5 +73,10 @@ public class ImpresoraServiceImpl implements ImpresoraService {
     @Override
     public boolean existsByNumeroSerie(String numeroSerie) {
         return impresoraRepository.existsByNumeroSerie(numeroSerie);
+    }
+
+    @Override
+    public Page<Impresora> getAllImpresoras(Pageable pageable) {
+        return impresoraRepository.findAll(pageable);
     }
 }

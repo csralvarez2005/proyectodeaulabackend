@@ -2,18 +2,19 @@ package inventarioEyBackend.util;
 
 
 import com.itextpdf.text.*;
-import com.itextpdf.text.pdf.PdfPCell;
-import com.itextpdf.text.pdf.PdfPTable;
-import com.itextpdf.text.pdf.PdfWriter;
+import com.itextpdf.text.pdf.*;
 import com.itextpdf.text.pdf.draw.LineSeparator;
+import inventarioEyBackend.dto.ReporteAsignacionDTO;
 import inventarioEyBackend.model.Equipo;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.List;
+import java.util.stream.Stream;
 
 public class PdfGenerator {
 
+    // Método 1: Reporte de Equipos
     public static ByteArrayInputStream generarReporteEquipos(List<Equipo> equipos) {
         Document document = new Document();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -30,7 +31,6 @@ public class PdfGenerator {
                 document.add(new Paragraph("Reporte del Equipo - " + equipo.getCodigoEquipo(), sectionFont));
                 document.add(new Paragraph(" "));
 
-                // Información general
                 document.add(new Paragraph("Información General", sectionFont));
                 document.add(crearTabla(
                         new String[]{"Código", "Descripción", "Tipo", "Modelo", "Marca", "Serie", "Ubicación", "Utilización", "Recibido por"},
@@ -41,7 +41,6 @@ public class PdfGenerator {
                         },
                         labelFont, valueFont));
 
-                // Información de compra y garantía
                 document.add(new Paragraph("Información de Compra y Garantía", sectionFont));
                 document.add(crearTabla(
                         new String[]{"Proveedor", "Orden de Compra", "Factura", "Fecha de Compra", "Fecha Fin Garantía", "Garantía", "Precio"},
@@ -53,7 +52,6 @@ public class PdfGenerator {
                         },
                         labelFont, valueFont));
 
-                // Hardware
                 document.add(new Paragraph("Hardware", sectionFont));
                 document.add(crearTabla(
                         new String[]{"Procesador", "RAM (GB)", "Almacenamiento (GB)", "Tipo Almacenamiento", "Placa Base", "Fuente (W)", "Tarjeta Gráfica", "Red", "Sonido", "Gabinete", "Perif. Entrada", "Perif. Salida", "Componentes", "Accesorios"},
@@ -68,7 +66,6 @@ public class PdfGenerator {
                         },
                         labelFont, valueFont));
 
-                // Software
                 document.add(new Paragraph("Software", sectionFont));
                 document.add(crearTabla(
                         new String[]{"Sistema Operativo", "Versión SO", "Drivers Instalados", "Programas Instalados", "Utilidades del Sistema"},
@@ -78,7 +75,6 @@ public class PdfGenerator {
                         },
                         labelFont, valueFont));
 
-                // Red / Configuración técnica
                 document.add(new Paragraph("Red / Configuración Técnica", sectionFont));
                 document.add(crearTabla(
                         new String[]{"Dirección IP", "Dirección MAC", "Estado"},
@@ -100,6 +96,50 @@ public class PdfGenerator {
         return new ByteArrayInputStream(out.toByteArray());
     }
 
+    // Método 2: Reporte de Asignaciones
+    public static ByteArrayInputStream generarReporteAsignaciones(List<ReporteAsignacionDTO> datos) {
+        Document document = new Document();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+
+        try {
+            PdfWriter.getInstance(document, out);
+            document.open();
+
+            Font headFont = FontFactory.getFont(FontFactory.HELVETICA_BOLD);
+
+            Paragraph titulo = new Paragraph("Reporte de Asignaciones de Equipos", headFont);
+            titulo.setAlignment(Element.ALIGN_CENTER);
+            titulo.setSpacingAfter(20);
+            document.add(titulo);
+
+            PdfPTable table = new PdfPTable(4);
+            table.setWidthPercentage(100);
+            table.setWidths(new int[]{3, 3, 4, 3});
+
+            Stream.of("Área", "Código Equipo", "Funcionario", "Fecha Asignación")
+                    .forEach(header -> {
+                        PdfPCell hcell = new PdfPCell(new Phrase(header, headFont));
+                        hcell.setHorizontalAlignment(Element.ALIGN_CENTER);
+                        table.addCell(hcell);
+                    });
+
+            for (ReporteAsignacionDTO dato : datos) {
+                table.addCell(dato.getNombreArea());
+                table.addCell(dato.getCodigoEquipo());
+                table.addCell(dato.getFuncionario());
+                table.addCell(dato.getFechaAsignacion().toString());
+            }
+
+            document.add(table);
+            document.close();
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
+
+        return new ByteArrayInputStream(out.toByteArray());
+    }
+
+    // Método auxiliar común
     private static PdfPTable crearTabla(String[] etiquetas, String[] valores, Font labelFont, Font valueFont) throws DocumentException {
         PdfPTable table = new PdfPTable(2);
         table.setWidthPercentage(100);
